@@ -1,0 +1,9 @@
+{
+  "name": "popdex-card",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PopDEX X-handle holographic trading card generator, with an official-X-API avatar proxy.",
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

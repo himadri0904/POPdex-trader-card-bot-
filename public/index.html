@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PopDEX Trader Card</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --bg: #0a0e1a;
+    --bg-deep: #060811;
+    --surface: #12172a;
+    --surface-2: #171e38;
+    --line: #262f4d;
+    --text: #eceaf5;
+    --muted: #8a90ae;
+    --violet: #7c5cff;
+    --pink: #ff4d8d;
+    --teal: #2de8c0;
+    --gold: #ffc857;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1100px 600px at 12% -10%, rgba(124,92,255,0.16), transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, rgba(45,232,192,0.10), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 64px 24px 80px;
+  }
+
+  .mark{ display:flex; align-items:center; gap:10px; margin-bottom: 40px; }
+  .mark svg{ width:26px; height:26px; }
+  .mark span{ font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:17px; letter-spacing:0.2px; }
+  .mark span em{ font-style:normal; color: var(--violet); }
+
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: clamp(28px, 4.4vw, 44px);
+    line-height:1.12;
+    letter-spacing:-0.01em;
+    max-width: 620px;
+    text-align:center;
+    margin: 0 0 14px;
+  }
+  p.sub{
+    color: var(--muted);
+    font-size: 16px;
+    line-height:1.6;
+    max-width: 440px;
+    text-align:center;
+    margin: 0 0 52px;
+  }
+
+  /* ---------- CARD ---------- */
+  .stage{
+    perspective: 1400px;
+    width: 320px;
+    height: 452px;
+    margin-bottom: 40px;
+  }
+  .card{
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 20px;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    cursor: grab;
+  }
+  .card.dragging{ transition: none; cursor: grabbing; }
+
+  .face{
+    position:absolute; inset:0;
+    border-radius: 20px;
+    overflow:hidden;
+    background: linear-gradient(160deg, var(--surface) 0%, var(--surface-2) 100%);
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    transform: translateZ(1px);
+  }
+
+  .sheen{
+    position:absolute; inset:0;
+    mix-blend-mode: color-dodge;
+    opacity: 0.55;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.9), transparent 45%);
+    pointer-events:none;
+    transition: opacity 0.4s ease;
+  }
+  .foil{
+    position:absolute; inset:0;
+    pointer-events:none;
+    opacity: 0.28;
+    mix-blend-mode: color-dodge;
+    background: linear-gradient(
+      115deg,
+      transparent 20%,
+      var(--pink) 32%,
+      var(--violet) 45%,
+      var(--teal) 58%,
+      transparent 72%
+    );
+    background-size: 250% 250%;
+    background-position: var(--fx, 50%) var(--fy, 50%);
+    transition: background-position 0.4s ease, opacity 0.4s ease;
+  }
+
+  .card-top{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding: 20px 20px 0;
+    position:relative; z-index:2;
+  }
+  .issue{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .tier-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight:600;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    padding: 4px 9px;
+    border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(255,255,255,0.04);
+    color: var(--muted);
+  }
+  .tier-chip.rare{ color:#9db4ff; border-color:rgba(124,140,255,0.4); background:rgba(124,140,255,0.08); }
+  .tier-chip.epic{ color:#ecb2ff; border-color:rgba(236,140,255,0.4); background:rgba(200,92,255,0.1); }
+  .tier-chip.legendary{ color:#ffd479; border-color:rgba(255,200,87,0.55); background:rgba(255,180,60,0.12); }
+
+  .avatar-wrap{
+    position:relative; z-index:2;
+    width: 152px; height:152px;
+    margin: 22px auto 0;
+    border-radius: 50%;
+    padding: 3px;
+    background: conic-gradient(from 180deg, var(--line), var(--line));
+  }
+  .avatar-wrap.rare{ background: conic-gradient(from var(--spin,0deg), var(--violet), #4c6bff, var(--violet)); }
+  .avatar-wrap.epic{ background: conic-gradient(from var(--spin,0deg), var(--pink), var(--violet), var(--pink)); }
+  .avatar-wrap.legendary{ background: conic-gradient(from var(--spin,0deg), var(--gold), var(--pink), var(--teal), var(--violet), var(--gold)); }
+
+  .avatar{
+    width:100%; height:100%;
+    border-radius:50%;
+    overflow:hidden;
+    background: var(--bg-deep);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .avatar img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .avatar .fallback{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 44px; font-weight:600; color: var(--muted);
+  }
+
+  .card-id{
+    position:relative; z-index:2;
+    text-align:center;
+    margin-top: 16px;
+    padding: 0 20px;
+  }
+  .handle{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: 21px;
+    letter-spacing: -0.01em;
+  }
+  .subline{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.03em;
+  }
+
+  .card-bottom{
+    position:absolute; left:0; right:0; bottom:0; z-index:2;
+    padding: 14px 20px 18px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    background: linear-gradient(0deg, rgba(6,8,17,0.55), transparent);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .card-bottom .pd-wordmark{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:12px; font-weight:600; color: var(--muted); letter-spacing:0.02em;
+  }
+  .card-bottom .pd-wordmark em{ color:var(--text); font-style:normal; }
+  .dot-row{ display:flex; gap:5px; }
+  .dot-row span{ width:5px; height:5px; border-radius:50%; background: var(--line); }
+  .dot-row span.on{ background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+
+  /* ---------- CONTROLS ---------- */
+  .panel{
+    width: 100%;
+    max-width: 380px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .field{
+    display:flex; align-items:center;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 4px 4px 4px 16px;
+    transition: border-color 0.2s ease;
+  }
+  .field:focus-within{ border-color: var(--violet); }
+  .field .at{ color: var(--muted); font-family:'Space Grotesk', sans-serif; font-weight:500; }
+  .field input{
+    flex:1;
+    background:none; border:none; outline:none;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    padding: 12px 8px;
+  }
+  .field input::placeholder{ color: #565f80; }
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:600;
+    font-size: 14.5px;
+    border:none;
+    border-radius: 10px;
+    padding: 13px 18px;
+    cursor:pointer;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+  }
+  button:active{ transform: scale(0.98); }
+  button:disabled{ opacity:0.5; cursor:default; }
+  .btn-primary{
+    background: linear-gradient(120deg, var(--violet), #5b3ff0);
+    color: white;
+  }
+  .btn-ghost{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text);
+  }
+  .btn-row{ display:flex; gap:8px; }
+  .btn-row button{ flex:1; }
+
+  .status{
+    min-height: 18px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align:center;
+  }
+  .status.err{ color: var(--pink); }
+
+  @media (max-width: 400px){
+    .stage{ width: 280px; height: 396px; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="mark">
+    <svg viewBox="0 0 26 26" fill="none">
+      <circle cx="10" cy="10" r="8.5" stroke="#7c5cff" stroke-width="1.6"/>
+      <circle cx="16" cy="16" r="8.5" stroke="#2de8c0" stroke-width="1.6"/>
+    </svg>
+    <span>Pop<em>DEX</em> Cards</span>
+  </div>
+
+  <h1>Turn your X handle into a holo trading card</h1>
+  <p class="sub">Pull your profile photo, mint a rarity tier, and get a tilting foil card you can drag, screenshot, and post.</p>
+
+  <div class="stage" id="stage">
+    <div class="card" id="card">
+      <div class="face">
+        <div class="foil" id="foil"></div>
+        <div class="sheen" id="sheen"></div>
+
+        <div class="card-top">
+          <span class="issue" id="issue">PD-0000</span>
+          <span class="tier-chip" id="tierChip">—</span>
+        </div>
+
+        <div class="avatar-wrap" id="avatarWrap">
+          <div class="avatar" id="avatar">
+            <span class="fallback">?</span>
+          </div>
+        </div>
+
+        <div class="card-id">
+          <div class="handle" id="handle">@yourhandle</div>
+          <div class="subline" id="subline">enter a handle below</div>
+        </div>
+
+        <div class="card-bottom">
+          <span class="pd-wordmark">pop<em>dex</em>.card</span>
+          <div class="dot-row" id="dotRow"><span></span><span></span><span></span><span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="field">
+      <span class="at">@</span>
+      <input type="text" id="handleInput" placeholder="yourhandle" maxlength="15" autocomplete="off">
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" id="genBtn">Mint card</button>
+      <button class="btn-ghost" id="dlBtn" disabled>Download</button>
+    </div>
+    <div class="status" id="statusMsg">card idles until you mint one — try it</div>
+  </div>
+
+<script>
+(function(){
+  const stage = document.getElementById('stage');
+  const card = document.getElementById('card');
+  const foil = document.getElementById('foil');
+  const sheen = document.getElementById('sheen');
+  const avatarWrap = document.getElementById('avatarWrap');
+  const avatar = document.getElementById('avatar');
+  const handleEl = document.getElementById('handle');
+  const sublineEl = document.getElementById('subline');
+  const issueEl = document.getElementById('issue');
+  const tierChip = document.getElementById('tierChip');
+  const dotRow = document.getElementById('dotRow');
+  const input = document.getElementById('handleInput');
+  const genBtn = document.getElementById('genBtn');
+  const dlBtn = document.getElementById('dlBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  const TIERS = [
+    { key:'common',    label:'Common',    weight:40, dots:1 },
+    { key:'rare',       label:'Rare',       weight:30, dots:2 },
+    { key:'epic',       label:'Epic',       weight:20, dots:3 },
+    { key:'legendary',  label:'Legendary',  weight:10, dots:4 },
+  ];
+
+  function hashStr(str){
+    let h = 0;
+    for(let i=0;i<str.length;i++){
+      h = (Math.imul(31,h) + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h);
+  }
+
+  function tierFor(handle){
+    const h = hashStr(handle.toLowerCase());
+    const bucket = h % 100;
+    let acc = 0;
+    for(const t of TIERS){
+      acc += t.weight;
+      if(bucket < acc) return t;
+    }
+    return TIERS[0];
+  }
+
+  function issueFor(handle){
+    const h = hashStr(handle.toLowerCase() + 'issue');
+    return 'PD-' + String(h % 9999).padStart(4,'0');
+  }
+
+  // ---- idle auto-rotate (hero demo motion) ----
+  let idle = true;
+  let idleT = 0;
+  let rafId;
+  function idleLoop(){
+    if(idle){
+      idleT += 0.006;
+      const ry = Math.sin(idleT) * 10;
+      const rx = Math.cos(idleT * 0.8) * 4;
+      card.style.transform = `rotateY(${ry}deg) rotateX(${rx}deg)`;
+      foil.style.setProperty('--fx', (50 + Math.sin(idleT)*30) + '%');
+      foil.style.setProperty('--fy', (50 + Math.cos(idleT)*30) + '%');
+      avatarWrap.style.setProperty('--spin', (idleT*40) + 'deg');
+    }
+    rafId = requestAnimationFrame(idleLoop);
+  }
+  idleLoop();
+
+  // ---- pointer tilt ----
+  let dragging = false;
+  function applyTilt(clientX, clientY){
+    const rect = stage.getBoundingClientRect();
+    const px = (clientX - rect.left) / rect.width;
+    const py = (clientY - rect.top) / rect.height;
+    const ry = (px - 0.5) * 30;
+    const rx = (0.5 - py) * 24;
+    card.style.transform = `rotateY(${ry}deg) rotateX(${rx}deg)`;
+    sheen.style.setProperty('--mx', (px*100) + '%');
+    sheen.style.setProperty('--my', (py*100) + '%');
+    foil.style.setProperty('--fx', (px*100) + '%');
+    foil.style.setProperty('--fy', (py*100) + '%');
+  }
+
+  function onEnter(){ idle = false; card.classList.add('dragging'); }
+  function onLeave(){
+    card.classList.remove('dragging');
+    card.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    setTimeout(()=>{ idle = true; }, 500);
+  }
+
+  stage.addEventListener('mouseenter', onEnter);
+  stage.addEventListener('mousemove', (e)=> applyTilt(e.clientX, e.clientY));
+  stage.addEventListener('mouseleave', onLeave);
+
+  stage.addEventListener('touchstart', ()=>{ onEnter(); }, {passive:true});
+  stage.addEventListener('touchmove', (e)=>{
+    const t = e.touches[0];
+    applyTilt(t.clientX, t.clientY);
+  }, {passive:true});
+  stage.addEventListener('touchend', onLeave);
+
+  // ---- PFP fetching ----
+  // Priority order:
+  //   1. Our own /api/avatar proxy — calls the official X API server-side.
+  //      Reliable, but only works once you've deployed api/avatar.js with
+  //      an X_BEARER_TOKEN set (see the project README). If that route
+  //      isn't deployed, the fetch below just fails fast and we move on.
+  //   2. unavatar.io — free, no key, but X actively blocks the scraping it
+  //      depends on, so plenty of real handles will miss here.
+  //   3. An initial, so the card never gets stuck loading.
+  const AVATAR_SOURCES = (handle) => [
+    `https://unavatar.io/x/${encodeURIComponent(handle)}?fallback=false&t=${Date.now()}`,
+    `https://unavatar.io/twitter/${encodeURIComponent(handle)}?fallback=false&t=${Date.now()}`,
+  ];
+
+  function setFallbackAvatar(handle){
+    const initial = (handle[0] || '?').toUpperCase();
+    avatar.innerHTML = `<span class="fallback">${initial}</span>`;
+  }
+
+  function tryLoad(src){
+    return new Promise((resolve)=>{
+      const img = new Image();
+      img.referrerPolicy = 'no-referrer';
+      img.onload = ()=> resolve(img);
+      img.onerror = ()=> resolve(null);
+      img.src = src;
+    });
+  }
+
+  async function loadFromProxy(handle){
+    try{
+      const r = await fetch(`/api/avatar?handle=${encodeURIComponent(handle)}`);
+      if(!r.ok) return null;
+      const data = await r.json();
+      if(!data.ok || !data.url) return null;
+      return await tryLoad(data.url);
+    }catch(e){
+      return null; // proxy not deployed / network error — fall through
+    }
+  }
+
+  async function loadAvatar(handle){
+    const proxied = await loadFromProxy(handle);
+    if(proxied){
+      avatar.innerHTML = '';
+      avatar.appendChild(proxied);
+      return true;
+    }
+
+    for(const src of AVATAR_SOURCES(handle)){
+      const img = await tryLoad(src);
+      if(img){
+        avatar.innerHTML = '';
+        avatar.appendChild(img);
+        return true;
+      }
+    }
+    setFallbackAvatar(handle);
+    return false;
+  }
+
+  function setDots(n){
+    [...dotRow.children].forEach((d,i)=> d.classList.toggle('on', i < n));
+  }
+
+  function clearTierClasses(el){
+    el.classList.remove('rare','epic','legendary');
+  }
+
+  async function mint(){
+    const raw = input.value.trim().replace(/^@/, '');
+    if(!raw){
+      statusMsg.textContent = 'type a handle first';
+      statusMsg.classList.add('err');
+      return;
+    }
+    statusMsg.classList.remove('err');
+    statusMsg.textContent = 'fetching profile photo…';
+    genBtn.disabled = true;
+    dlBtn.disabled = true;
+
+    const tier = tierFor(raw);
+    const issue = issueFor(raw);
+
+    const ok = await loadAvatar(raw);
+
+    handleEl.textContent = '@' + raw;
+    issueEl.textContent = issue;
+    sublineEl.textContent = ok ? 'popdex trader card' : 'photo unavailable — using initial';
+
+    tierChip.textContent = tier.label;
+    clearTierClasses(tierChip);
+    if(tier.key !== 'common') tierChip.classList.add(tier.key);
+
+    clearTierClasses(avatarWrap);
+    if(tier.key !== 'common') avatarWrap.classList.add(tier.key);
+
+    foil.style.opacity = tier.key === 'legendary' ? 0.55 : tier.key === 'epic' ? 0.4 : tier.key === 'rare' ? 0.3 : 0.14;
+    setDots(tier.dots);
+
+    // one orchestrated reveal
+    idle = false;
+    card.style.transition = 'transform 0.15s ease';
+    card.style.transform = 'rotateY(90deg) rotateX(0deg)';
+    setTimeout(()=>{
+      card.style.transition = 'transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)';
+      card.style.transform = 'rotateY(0deg) rotateX(0deg)';
+      setTimeout(()=>{ idle = true; }, 600);
+    }, 150);
+
+    statusMsg.textContent = `minted — ${tier.label} · ${issue}`;
+    genBtn.disabled = false;
+    dlBtn.disabled = false;
+  }
+
+  genBtn.addEventListener('click', mint);
+  input.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') mint(); });
+
+  dlBtn.addEventListener('click', ()=>{
+    idle = false;
+    card.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    statusMsg.textContent = 'rendering image…';
+    setTimeout(()=>{
+      html2canvas(document.querySelector('.face'), { backgroundColor: null, scale: 3 }).then(canvas=>{
+        const link = document.createElement('a');
+        link.download = (handleEl.textContent.replace('@','') || 'popdex') + '-card.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        statusMsg.textContent = 'downloaded';
+        idle = true;
+      });
+    }, 100);
+  });
+})();
+</script>
+</body>
+</html>
